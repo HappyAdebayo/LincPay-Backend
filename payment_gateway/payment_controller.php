@@ -34,7 +34,7 @@ class PaymentController {
             'metadata' => [
                 'custom_data' => $customData,
             ],
-            'callback_url' => "http://192.168.209.1:8080/lincpay_backend/api/payment_api.php?action=validate"
+            'callback_url' => "http://192.168.155.1:8080/lincpay_backend/api/payment_api.php?action=validate"
             // 'callback_url' => "http://192.168.74.1/lincpay_backend/payment_success.html"
 
         ];
