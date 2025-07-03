@@ -34,7 +34,7 @@ class PaymentController {
             'metadata' => [
                 'custom_data' => $customData,
             ],
-            'callback_url' => "http://192.168.155.1:8080/lincpay_backend/api/payment_api.php?action=validate"
+            'callback_url' => "http://192.168.77.1:8080/lincpay_backend/api/payment_api.php?action=validate"
             // 'callback_url' => "http://192.168.74.1/lincpay_backend/payment_success.html"
 
         ];
@@ -125,38 +125,62 @@ if (isset($response['status']) && $response['status'] === true) {
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $result = $stmt->get_result();
+    
+    $semester="credited";
+    $fee_name="credited";
+    $status="credit";
+    $notes=null;
 
-    if ($result->num_rows > 0) {
-        // User exists, update amount and reference
-        $row = $result->fetch_assoc();
-        $newAmount = $row['amount_paid'] + $amount;
-        $stmt->close();
+if ($result->num_rows > 0) {
+    // User exists
+    $row = $result->fetch_assoc();
+    $previousAmount = $row['amount_paid'];
+    $newAmount = $previousAmount + $amount;
+    $stmt->close();
 
-        $updateStmt = $this->conn->prepare("UPDATE student_account SET amount_paid = ?, paystack_reference = ?, status = ? WHERE user_id = ?");
-        if (!$updateStmt) {
-            return ['status' => 'error', 'message' => 'Database error: ' . $this->conn->error];
-        }
-        $updateStmt->bind_param("dsii", $newAmount, $reference, $status, $user_id);
-
-        if (!$updateStmt->execute()) {
-            return ['status' => 'error', 'message' => 'Failed to update transaction: ' . $updateStmt->error];
-        }
-        $updateStmt->close();
-    } else {
-        // No existing user record, insert new
-        $stmt->close();
-
-        $insertStmt = $this->conn->prepare("INSERT INTO student_account (user_id, amount_paid, status, paystack_reference) VALUES (?, ?, ?, ?)");
-        if (!$insertStmt) {
-            return ['status' => 'error', 'message' => 'Database error: ' . $this->conn->error];
-        }
-        $insertStmt->bind_param("idss", $user_id, $amount, $status, $reference);
-
-        if (!$insertStmt->execute()) {
-            return ['status' => 'error', 'message' => 'Failed to save transaction: ' . $insertStmt->error];
-        }
-        $insertStmt->close();
+    $updateStmt = $this->conn->prepare("UPDATE student_account SET amount_paid = ?, paystack_reference = ?, status = ? WHERE user_id = ?");
+    if (!$updateStmt) {
+        return ['status' => 'error', 'message' => 'Database error: ' . $this->conn->error];
     }
+    $updateStmt->bind_param("dsii", $newAmount, $reference, $status, $user_id);
+
+    if (!$updateStmt->execute()) {
+        return ['status' => 'error', 'message' => 'Failed to update transaction: ' . $updateStmt->error];
+    }
+
+    // Save original (previous) payment as a new transaction
+    $insertStmt = $this->conn->prepare("INSERT INTO student_transactions (user_id, amount_paid, semester, fee_name, notes, created_at, `status`) VALUES (?, ?, ?, ?, ?, NOW(), ?)");
+    if (!$insertStmt) throw new Exception('Prepare failed: ' . $this->conn->error);
+    $insertStmt->bind_param("idssss", $user_id, $previousAmount, $semester, $fee_name, $notes, $status);
+    $insertStmt->execute();
+
+    $insertStmt->close();
+    $updateStmt->close();
+
+} else {
+    // New user record
+    $stmt->close();
+
+    $insertStmt = $this->conn->prepare("INSERT INTO student_account (user_id, amount_paid, status, paystack_reference) VALUES (?, ?, ?, ?)");
+    if (!$insertStmt) {
+        return ['status' => 'error', 'message' => 'Database error: ' . $this->conn->error];
+    }
+    $insertStmt->bind_param("idss", $user_id, $amount, $status, $reference);
+
+    if (!$insertStmt->execute()) {
+        return ['status' => 'error', 'message' => 'Failed to save transaction: ' . $insertStmt->error];
+    }
+    $insertStmt->close();
+
+    // Log new transaction
+    $insertStmt = $this->conn->prepare("INSERT INTO student_transactions (user_id, amount_paid, semester, fee_name, notes, created_at, `status`) VALUES (?, ?, ?, ?, ?, NOW(), ?)");
+    if (!$insertStmt) throw new Exception('Prepare failed: ' . $this->conn->error);
+    $insertStmt->bind_param("idssss", $user_id, $amount, $semester, $fee_name, $notes, $status);
+    $insertStmt->execute();
+
+    $insertStmt->close();
+}
+
 
     $this->conn->close();
 

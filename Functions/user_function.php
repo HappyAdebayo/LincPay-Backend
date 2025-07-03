@@ -190,7 +190,7 @@ function getUserTransactions($conn, $data) {
         return ["status" => "error", "message" => "User ID is missing or invalid."];
     }
 
-    $stmt = $conn->prepare("SELECT id, fee_name, semester, amount_paid, created_at FROM student_transactions WHERE user_id = ? ORDER BY created_at DESC");
+    $stmt = $conn->prepare("SELECT id, fee_name, semester, amount_paid, created_at, status FROM student_transactions WHERE user_id = ? ORDER BY created_at DESC");
 
     if (!$stmt) {
         return ["status" => "error", "message" => "Prepare failed: " . $conn->error];
@@ -208,7 +208,7 @@ function getUserTransactions($conn, $data) {
     while ($row = $result->fetch_assoc()) {
         $transactions[] = [
             "id" => (string)$row['id'],
-            "type" => "expense",
+            "type" => strtolower($row['status']) === 'debit' ? 'expense' : 'income',
             "title" => $row['fee_name'],
             "date" => formatDateTime($row['created_at']),
             "amount" => floatval($row['amount_paid']),

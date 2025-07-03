@@ -43,11 +43,11 @@ if ($action === 'validate' && isset($_GET['reference'])) {
     // ]);
 
      if ($response['status'] === 'error') {
-        header('Location: http://192.168.155.1:8080/lincpay_backend/payment_error.html');
+        header('Location: http://192.168.77.1:8080/lincpay_backend/payment_error.html');
         exit;
     }
 
-    header('Location: http://192.168.155.1:8080/lincpay_backend/payment_success.html');
+    header('Location: http://192.168.77.1:8080/lincpay_backend/payment_success.html');
     exit;
 }
 
