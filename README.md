@@ -7,7 +7,6 @@ This is the backend for **LincPay**, a student finance app. Built using **pure P
 - Fee management endpoints
 - Transaction processing & logging
 - Secure API for mobile clients
-- Admin fee tracking interface
 
 ## 🧱 Tech Stack
 - PHP (no framework)
